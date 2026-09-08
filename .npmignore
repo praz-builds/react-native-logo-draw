@@ -1,0 +1,11 @@
+# package.json "files" is the source of truth for what ships.
+# This file only exists so a stray build artefact cannot sneak in.
+example/
+__tests__/
+src/
+cli/
+scripts/
+docs/
+coverage/
+.github/
+*.tsbuildinfo
