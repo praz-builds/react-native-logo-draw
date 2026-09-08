@@ -95,6 +95,36 @@ import { Logo } from './logo';
 
 ---
 
+## App icons are a separate command
+
+If they also want an app icon — and if they are branding a launch screen, they usually
+do — that is `icons`, not `extract`:
+
+```sh
+npx react-native-logo-draw icons --svg logo.svg --bg '#FF6B1A' --out-dir ./assets
+npx react-native-logo-draw icons --font Brand.ttf --char K --bg '#FF6B1A' --out-dir ./assets
+```
+
+It emits four files and prints the `app.json` fragment to paste. Ask for the background
+colour explicitly; `--bg` is required precisely because it is not guessable.
+
+**Do not generate these by hand, and do not reuse one square PNG for all four slots.**
+That is the default mistake and it produces three silent bugs, none of which fail a
+build:
+
+| File | The rule it exists to satisfy |
+| --- | --- |
+| `icon.png` | Full-bleed, **not** pre-rounded. iOS applies its own superellipse mask; rounding it yourself leaves the original corners visible outside the mask. |
+| `icon-android-foreground.png` | Transparent, mark inset inside the centre **66%** safe circle. Android crops adaptive icons to a circle and eats roughly a third — a full-bleed foreground gets clipped. The colour moves to `adaptiveIcon.backgroundColor`. |
+| `icon-notification.png` | **Solid white on transparent.** Android renders notification small-icons as a flat silhouette, so any colour becomes a white blob or a white square. `--fg` is deliberately ignored for this file. |
+| `favicon.png` | 48px, where a letterform's counters close up if the mark is scaled naively. |
+
+The command measures rather than assumes: it reports the ink-centre offset, the ink
+radius against the safe-circle radius, and warns if a counter closes at favicon size.
+If it warns, do not ship it — pick a simpler mark for the icon.
+
+If the person already has icons and only wants the animation, skip this entirely.
+
 ## Things that will bite you
 
 - **Reduced motion is handled for you.** The component reads
