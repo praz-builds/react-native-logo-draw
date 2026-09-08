@@ -1,0 +1,4 @@
+<!-- A four-point sparkle, all curves. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M50,4 C55,30 70,45 96,50 C70,55 55,70 50,96 C45,70 30,55 4,50 C30,45 45,30 50,4 Z"/>
+</svg>

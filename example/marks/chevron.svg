@@ -1,0 +1,4 @@
+<!-- A plain chevron: one contour, no surprises. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M24,8 L84,50 L24,92 L24,70 L54,50 L24,30 Z"/>
+</svg>

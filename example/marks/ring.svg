@@ -1,0 +1,5 @@
+<!-- A ring: the counter is a second contour wound against the first. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M5,50 A45,45 0 1,0 95,50 A45,45 0 1,0 5,50 Z"/>
+  <path d="M28,50 A22,22 0 1,1 72,50 A22,22 0 1,1 28,50 Z"/>
+</svg>

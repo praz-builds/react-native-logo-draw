@@ -1,0 +1,8 @@
+<!-- A "K" drawn the way a display face draws one: separate overlapping pieces,
+     never merged. Filled it looks right. Stroked, it is four rectangles. -->
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100">
+  <path d="M10,5 H32 V95 H10 Z"/>
+  <path d="M26,54 L64,5 L88,5 L42,62 Z"/>
+  <path d="M26,44 L50,44 L90,95 L64,95 Z"/>
+  <path d="M12,40 H36 V62 H12 Z"/>
+</svg>
