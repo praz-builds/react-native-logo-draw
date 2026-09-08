@@ -18,6 +18,9 @@ mark never sits as a hollow outline waiting for something to happen to it.
 - 🔧 **A CLI that does the hard part** — turns a font glyph or an SVG into a
   single traceable outline and measures the perimeter React Native cannot
   measure at runtime.
+- 🖼️ **And generates your whole app-icon set** — iOS, the Android adaptive
+  foreground, the Android notification silhouette and the favicon, each obeying
+  the rule that silently ruins it. See [App icons](#app-icons-for-expo-npx-react-native-logo-draw-icons).
 - 🧩 **Merges overlapping contours**, so letters from real display faces
   actually trace instead of coming apart into pieces.
 - ♿ **Respects Reduce Motion** — settles instantly, schedules nothing.
@@ -109,6 +112,12 @@ Give it a signature captured as a path and it replays as if being written. Note
 this is playback, not capture — if you need users to *sign*, use
 `react-native-signature-canvas` and animate the path it gives you.
 
+### Generate the app icons from the same mark
+
+`npx react-native-logo-draw icons` writes `icon.png`, the Android adaptive
+foreground, the Android notification silhouette and the favicon, and prints the
+`app.json` fragment. [Details below](#app-icons-for-expo-npx-react-native-logo-draw-icons).
+
 ### Reveal an icon on first run
 
 Short `duration`, `autoPlay={false}`, and a `play()` call on the ref when the
@@ -156,6 +165,139 @@ it rather than grinding away silently.
 
 Installing the component does **not** install the CLI's dependencies. The CLI
 is shipped pre-bundled, so `dependencies: {}` stays literally true.
+
+## App icons for Expo: `npx react-native-logo-draw icons`
+
+```sh
+npx react-native-logo-draw icons --svg logo.svg --bg '#FF6B1A' --fg '#FFFFFF'
+npx react-native-logo-draw icons --font Brand.ttf --char K --bg '#FF6B1A'
+```
+
+```
+icons/icon.png — 1024x1024, opaque, ink centre off by 0.00px, 15.3 KB
+icons/icon-android-foreground.png — 1024x1024, transparent, ink centre off by 0.00px,
+  ink radius 317px of 338px safe (20px spare), 12.2 KB
+icons/icon-notification.png — 96x96, transparent, all-white silhouette, 1.2 KB
+icons/favicon.png — 48x48, opaque, 1/1 counters open, 0.7 KB
+```
+
+It writes four PNGs and prints the `app.json` fragment that wires them up. The
+four files are not four sizes of one picture — they are four different rules,
+and **every one of them fails silently**. The build succeeds, the app installs,
+and the icon is quietly wrong on somebody else's phone. Those rules are the
+reason this command exists.
+
+### Why your Android adaptive icon is cropped, cut off, or zoomed in
+
+Android does not show your foreground image as you drew it. It masks adaptive
+icons to a circle, a squircle or a rounded square depending on the launcher, and
+it reserves the outer third of the canvas for the parallax it plays when you
+scroll the home screen. **Only the centre 66% by diameter is safe.** A
+foreground drawn full-bleed loses its edges — which, on a logo, is usually the
+part that made it a logo.
+
+So `icon-android-foreground.png` is transparent, and the mark is scaled to about
+48% of the canvas height so that every inked pixel falls inside that safe
+circle. The command then *measures* it: it decodes the PNG it just wrote, finds
+the furthest inked pixel from the centre, and fails if that distance exceeds the
+safe radius. The number is in the output above — `317px of 338px safe`.
+
+The background colour does not go in that PNG. It goes in
+`android.adaptiveIcon.backgroundColor`, because Android composites the two
+layers itself.
+
+### Why your Android notification icon is a white blob or a white square
+
+Android renders a notification small-icon as a **monochrome silhouette**. It
+keeps your alpha channel and throws every colour away. Ship your normal app icon
+there and users see a featureless white rectangle — the shape of your
+background, not the shape of your logo.
+
+So `icon-notification.png` is 96x96, transparent, and the mark is drawn in solid
+white whatever `--fg` says. The command decodes the file and asserts that every
+non-transparent pixel is exactly `#FFFFFF`.
+
+The tint you see in the shade comes from the plugin's `color`, not from the PNG.
+
+### Why your iOS icon has corners peeking out of the rounded mask
+
+iOS applies its own superellipse mask to `icon.png`. If you pre-round the
+corners yourself, your rounded square sits *inside* Apple's, and the four
+corners of your artwork show up as little nubs against the wallpaper.
+
+So `icon.png` is full-bleed and opaque: the background runs edge to edge, all
+four corners are the background colour, and there is no alpha channel at all.
+Let the platform do the rounding.
+
+### Flags
+
+| Flag | Default | What it does |
+| --- | --- | --- |
+| `--font <file>` | — | `.ttf` / `.otf` / `.woff` to read the glyph from |
+| `--char <c>` | — | The character to draw, with `--font` |
+| `--svg <file>` | — | An SVG file, or a file holding bare path data |
+| `--bg <hex>` | **required** | Background colour, and `adaptiveIcon.backgroundColor` |
+| `--fg <hex>` | `#FFFFFF` | The mark itself |
+| `--out-dir <dir>` | `./icons` | Where the four PNGs go |
+| `--samples <n>` | `48` | Curve flattening resolution, per segment (max `512`) |
+| `--force` | off | Overwrite files that are already there |
+
+### What it writes
+
+| File | Size | Alpha | The rule |
+| --- | --- | --- | --- |
+| `icon.png` | 1024x1024 | none | Full-bleed, opaque, glyph at 62% of the height, corners **not** pre-rounded |
+| `icon-android-foreground.png` | 1024x1024 | yes | Glyph at 48%, every pixel inside the centre 66% safe circle |
+| `icon-notification.png` | 96x96 | yes | Glyph at 70%, solid `#FFFFFF`, nothing else |
+| `favicon.png` | 48x48 | none | Same design as `icon.png`, with the counters checked |
+
+and, on stdout:
+
+```json
+{
+  "expo": {
+    "icon": "./icons/icon.png",
+    "android": {
+      "adaptiveIcon": {
+        "foregroundImage": "./icons/icon-android-foreground.png",
+        "backgroundColor": "#FF6B1A"
+      }
+    },
+    "web": { "favicon": "./icons/favicon.png" },
+    "plugins": [
+      ["expo-notifications", { "icon": "./icons/icon-notification.png", "color": "#FF6B1A" }]
+    ]
+  }
+}
+```
+
+### Optical centring, measured twice
+
+Centring a glyph on its advance box leaves it visibly off, because the side
+bearings are not inked — this is the single most common way a hand-made icon
+looks subtly wrong. The command places the mark on its **ink** bounds, then
+re-measures the *rendered* alpha and corrects what is left. Both the correction
+and the final offset are in the output, so "it is centred" is a number you can
+read rather than a claim.
+
+The 48px favicon gets one more check: counters. A letterform's holes — the hole
+in an "O", both holes in an "8", the wedge in a "K" — can close up at that size,
+and a closed counter stops the mark from being that letter. The command finds a
+point inside each counter and confirms it is still background.
+
+### No native module, and still `dependencies: {}`
+
+Every obvious way to write a PNG from Node — `sharp`, `canvas`, `@resvg/resvg-js`,
+`skia-canvas` — ships a platform-specific native binary. That would break both
+halves of what this package promises: a clean install graph, and `npx` working
+on whatever machine you happen to be on.
+
+So it does not use one. The geometry is already flattened to polygons by the
+same pipeline `extract` uses, including the boolean union that keeps counters
+open. Those polygons are scanline-filled into a coverage buffer — exact
+horizontal coverage, supersampled vertically, honouring nonzero winding — and
+encoded with a PNG writer built on Node's own `node:zlib`. It is about two
+hundred lines and no dependency at all.
 
 ## Why this exists
 
@@ -312,6 +454,11 @@ which this library deliberately does not have. In practice it is one
 interpolated prop on one node, which is cheap — but it does share the JS thread
 with your work, so do not kick one off in the same frame as a navigation
 transition.
+
+**The `icons` command does not do art direction.** It centres one mark on a flat
+background at four sizes, and checks the four rules that make that correct. A
+brand that needs a gradient, a badge, or a different composition at small sizes
+still needs a designer — export those from your editor and skip the command.
 
 **The CLI ignores `transform` attributes** and does not convert `<rect>`,
 `<circle>` or `<polygon>` elements. Flatten transforms and convert shapes to

@@ -1,14 +1,30 @@
 /**
- * `npx react-native-logo-draw extract` — a font glyph or an SVG file turned
- * into the `{ path, length, viewBox }` triple `<LogoDraw />` needs.
+ * The CLI's front door, and the `extract` command.
+ *
+ * `extract` turns a font glyph or an SVG file into the `{ path, length,
+ * viewBox }` triple `<LogoDraw />` needs. `icons` (in `icons.ts`) turns the
+ * same mark into an Expo app-icon set.
  *
  * Diagnostics go to stderr, the copy-pasteable payload to stdout, so
  * `... --json > logo.json` does the obvious thing.
  */
-import { lstatSync, writeFileSync } from 'node:fs';
 import { buildFromContours, type ExtractResult } from './geometry';
 import { contoursFromGlyph } from './font';
 import { contoursFromSvgFile } from './svg';
+import { ICONS_USAGE, runIcons } from './icons';
+import { writeOut } from './write';
+
+const ROOT_USAGE = `
+react-native-logo-draw — two things a logo needs that a bundler cannot do
+
+  extract   turn a glyph or an SVG into one traceable path, with its perimeter
+            npx react-native-logo-draw extract --font Brand.ttf --char K
+
+  icons     turn the same mark into a complete Expo app-icon set
+            npx react-native-logo-draw icons --svg logo.svg --bg '#FF6B1A'
+
+Run either with --help for its flags.
+`.trim();
 
 const USAGE = `
 react-native-logo-draw extract — turn a glyph or an SVG into a traceable path
@@ -184,42 +200,30 @@ export function formatSnippet(result: ExtractResult, name: string): string {
   ].join('\n');
 }
 
-/**
- * Write `--out` without destroying anything the user did not mean to lose.
- *
- * `wx` refuses to write over a file that already exists, which also means it
- * refuses to follow a symlink into somewhere else — `O_EXCL` fails on the link
- * itself. `--force` opts back into overwriting, but not into following: a
- * symlink is still refused, because "overwrite my output file" is never a
- * request to write through a link to a target you cannot see from the command
- * line.
- */
-function writeOut(path: string, payload: string, force: boolean): void {
-  let link: ReturnType<typeof lstatSync> | null = null;
-  try {
-    link = lstatSync(path);
-  } catch {
-    link = null; // nothing there, which is the happy path
-  }
-  if (link?.isSymbolicLink()) {
-    throw new Error(`${path} is a symlink; refusing to write through it. Pick a real path.`);
-  }
-  if (!force && link) {
-    throw new Error(`${path} already exists. Pass --force to overwrite it.`);
-  }
-  writeFileSync(path, payload, force ? undefined : { flag: 'wx' });
-}
-
 export function run(argv: string[]): number {
-  if (argv.length === 0 || argv.includes('-h') || argv.includes('--help')) {
+  const wantsHelp = argv.includes('-h') || argv.includes('--help');
+  const [command, ...rest] = argv;
+
+  if (command === 'icons') {
+    if (wantsHelp) {
+      process.stdout.write(`${ICONS_USAGE}\n`);
+      return 0;
+    }
+    return runIcons(rest);
+  }
+
+  if (command !== 'extract') {
+    if (argv.length === 0 || wantsHelp) {
+      process.stdout.write(`${ROOT_USAGE}\n`);
+      return 0;
+    }
+    process.stderr.write(`unknown command "${command}"\n\n${ROOT_USAGE}\n`);
+    return 1;
+  }
+
+  if (wantsHelp) {
     process.stdout.write(`${USAGE}\n`);
     return 0;
-  }
-
-  const [command, ...rest] = argv;
-  if (command !== 'extract') {
-    process.stderr.write(`unknown command "${command}"\n\n${USAGE}\n`);
-    return 1;
   }
 
   let options: Options;

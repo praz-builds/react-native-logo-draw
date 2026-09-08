@@ -1,7 +1,7 @@
 {
   "name": "react-native-logo-draw",
   "version": "0.1.0",
-  "description": "Animate any SVG path being drawn on like a pen tracing it, then filled. Zero runtime dependencies, built-in Animated only, iOS + Android + web.",
+  "description": "Animate any SVG path being drawn on like a pen tracing it, then filled. Plus a CLI that generates a correct Expo app-icon set. Zero runtime dependencies, built-in Animated only, iOS + Android + web.",
   "keywords": [
     "react-native",
     "expo",
@@ -25,7 +25,16 @@
     "brand",
     "ios",
     "android",
-    "typescript"
+    "typescript",
+    "app-icon",
+    "app-icons",
+    "adaptive-icon",
+    "android-adaptive-icon",
+    "notification-icon",
+    "favicon",
+    "icon-generator",
+    "expo-icons",
+    "png"
   ],
   "license": "MIT",
   "author": "Prasanna",
