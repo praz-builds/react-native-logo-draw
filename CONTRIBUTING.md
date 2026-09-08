@@ -1,0 +1,67 @@
+# Contributing
+
+Thanks for looking. Bug reports with a reproducible path are the most useful
+thing you can send.
+
+## Setup
+
+```sh
+npm install
+npm run build      # tsc for the component, esbuild for the CLI bundle
+npm test
+npm run typecheck
+npm run lint
+```
+
+Node 18 or newer.
+
+## Layout
+
+```
+src/        the component. Ships compiled. Zero dependencies, and it stays that way.
+cli/        the extractor. Bundled into dist/cli.js, so its dependencies never
+            reach anyone who installs the package.
+__tests__/  jest, covering both.
+example/    an Expo app. Not published.
+```
+
+## The two rules
+
+1. **`dependencies` stays `{}`.** Anything the CLI needs goes in
+   `devDependencies` and gets bundled by `scripts/build-cli.mjs`. Anything the
+   component needs has to be `react-native` or `react-native-svg`.
+2. **No Reanimated, no native code.** The point of the library is that it costs
+   a consumer nothing they have not already paid for. `strokeDashoffset` cannot
+   use the native driver, and that is a documented trade, not a bug to fix.
+
+## Working on the extractor
+
+`__tests__/fixtures/baloo2-extrabold-K.json` is the regression case: a "K" drawn
+as four overlapping unmerged contours. If a change makes `4 contours -> 1 shape,
+0 holes` stop being true, it broke the thing the CLI is for.
+
+The strongest check is the self-verification the CLI already runs: extract a
+glyph and confirm the reported mismatch is `0.00%`. A good change keeps that at
+zero across a whole font, not just one letter.
+
+```sh
+npm run build
+for c in A B K O Q R 8 % @; do
+  node dist/cli.js extract --font path/to/Some.ttf --char "$c" --json > /dev/null
+done
+```
+
+## Working on the component
+
+The behaviours worth guarding, all covered by tests:
+
+- the trace and the fill overlap (`__tests__/timeline.test.ts`)
+- reduced motion settles instantly and schedules nothing, including the
+  "platform has not answered yet" state
+- unmount stops the animation, drops timers, and never calls `onComplete`
+- `play()` / `reset()` through the ref
+
+## Pull requests
+
+Small and focused. Run `npm run typecheck && npm run lint && npm test` first.
+If you change the CLI's geometry, say what you ran it against.

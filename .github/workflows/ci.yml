@@ -1,0 +1,51 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        node: ['18', '20', '22']
+    steps:
+      # actions/checkout@v7.0.1
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1
+
+      # actions/setup-node@v7.0.0
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020
+        with:
+          node-version: ${{ matrix.node }}
+          cache: npm
+
+      - run: npm ci
+
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test -- --ci
+
+      # The package has to build, and it has to build to something publishable.
+      - run: npm run build
+      - name: The published package must have no runtime dependencies
+        run: |
+          node -e "
+            const pkg = require('./package.json');
+            const deps = Object.keys(pkg.dependencies || {});
+            if (deps.length) {
+              console.error('runtime dependencies leaked in:', deps.join(', '));
+              process.exit(1);
+            }
+          "
+      - name: The CLI must run from the built bundle
+        run: node dist/cli.js --help > /dev/null
