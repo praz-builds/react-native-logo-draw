@@ -22,6 +22,12 @@ mark never sits as a hollow outline waiting for something to happen to it.
   actually trace instead of coming apart into pieces.
 - ♿ **Respects Reduce Motion** — settles instantly, schedules nothing.
 
+## Using this with a coding agent
+
+If you are pointing Claude Code, Codex, Cursor or similar at this package, read
+[`AGENTS.md`](AGENTS.md) — it covers what to ask for before starting, and the two
+mistakes that fail silently (hand-writing the path, and guessing `length`).
+
 ## Install
 
 > **Not on npm yet.** Until the first release, install from GitHub:
