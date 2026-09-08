@@ -11,7 +11,12 @@ import {
 } from '../cli/geometry';
 import { contoursFromCommands, contoursFromGlyph, type GlyphCommand } from '../cli/font';
 import { contoursFromPathData, pathDataFrom } from '../cli/svg';
-import { splitSelfIntersections } from '../cli/selfintersect';
+import {
+  MAX_RING_POINTS,
+  MAX_SPLIT_POINTS,
+  hasSelfIntersection,
+  splitSelfIntersections,
+} from '../cli/selfintersect';
 import balooK from './fixtures/baloo2-extrabold-K.json';
 
 const square = (x: number, y: number, w: number, h: number): Contour => [
@@ -242,6 +247,125 @@ describe('Baloo 2 ExtraBold "K"', () => {
     });
     // Simplification must remove points, not shape.
     expect(exact.length).toBeCloseTo(407.02, 1);
+  });
+});
+
+/**
+ * A closed ring sampled from a polar function. Not self-crossing unless the
+ * radius is allowed to go negative, which is what `swing` past `radius` does.
+ */
+function polarRing(n: number, radius: number, swing: number, span = Math.PI * 2): Contour {
+  const points: Contour = [];
+  for (let i = 0; i < n; i += 1) {
+    const a = (span * i) / n;
+    const r = radius + swing * Math.cos(a);
+    points.push([50 + r * Math.cos(a), 50 + r * Math.sin(a)]);
+  }
+  points.push([points[0][0], points[0][1]]);
+  return points;
+}
+
+describe('the self-intersection screen', () => {
+  const bowtie: Contour = [
+    [0, 0],
+    [10, 10],
+    [10, 0],
+    [0, 10],
+    [0, 0],
+  ];
+
+  it('says no for shapes that do not cross, and yes for ones that do', () => {
+    expect(hasSelfIntersection([[0, 0], [10, 0], [10, 10], [0, 10]])).toBe(false);
+    expect(hasSelfIntersection(polarRing(600, 30, 8).slice(0, -1))).toBe(false);
+    expect(hasSelfIntersection(bowtie.slice(0, -1))).toBe(true);
+    // A limaçon with an inner loop: the classic "lasso" a bowl is drawn as.
+    expect(hasSelfIntersection(polarRing(600, 15, 32).slice(0, -1))).toBe(true);
+  });
+
+  it('is too small to matter below four points', () => {
+    expect(hasSelfIntersection([])).toBe(false);
+    expect(hasSelfIntersection([[0, 0], [1, 1], [2, 0]])).toBe(false);
+  });
+
+  /**
+   * The screen exists to skip the walk, so it must never disagree with it. A
+   * `false` has to mean the walk finds nothing — anything else is a wrong path
+   * shipped silently.
+   */
+  it('never says no when the walk would have found a crossing', () => {
+    const screenedSimple: string[] = [];
+    const walkedSimple: string[] = [];
+    let crossing = 0;
+    for (let n = 6; n <= 90; n += 3) {
+      for (let swing = 0; swing <= 40; swing += 5) {
+        for (const span of [Math.PI * 2, Math.PI * 2 + 0.6]) {
+          const label = `n=${n} swing=${swing} span=${span.toFixed(2)}`;
+          const ring = polarRing(n, 20, swing, span);
+          const points = ring.slice(0, -1);
+          if (hasSelfIntersection(points)) {
+            crossing += 1;
+            continue;
+          }
+          screenedSimple.push(label);
+          // The screen said no crossing. The walk must agree, which it does by
+          // handing back exactly the ring it was given.
+          const loops = splitSelfIntersections(ring);
+          const untouched =
+            loops.length === 1 &&
+            JSON.stringify(loops[0]) === JSON.stringify([...points, points[0]]);
+          if (untouched) walkedSimple.push(label);
+        }
+      }
+    }
+    expect(walkedSimple).toEqual(screenedSimple);
+    // Both answers have to have occurred for this to have proved anything.
+    expect(screenedSimple.length).toBeGreaterThan(20);
+    expect(crossing).toBeGreaterThan(20);
+  });
+
+  it('leaves the split of a crossing contour exactly as it was', () => {
+    const loops = splitSelfIntersections(bowtie);
+    expect(loops).toHaveLength(2);
+    expect(loops[0]).toEqual([
+      [5, 5],
+      [10, 10],
+      [10, 0],
+      [5, 5],
+    ]);
+  });
+
+  /**
+   * The screened path must be genuinely cheap, not merely correct — that is the
+   * whole point of it. A 20,000-point simple ring is what a 400-curve logo
+   * flattens to at the default --samples, and it used to be ~2s of walk.
+   */
+  it('screens a logo-sized simple contour in a fraction of a second', () => {
+    const ring = polarRing(20_000, 30, 8);
+    const started = Date.now();
+    expect(splitSelfIntersections(ring)).toHaveLength(1);
+    expect(Date.now() - started).toBeLessThan(1_000);
+  });
+});
+
+describe('the point caps', () => {
+  it('refuses an absurd contour outright, and names the flag to change', () => {
+    const ring = polarRing(MAX_RING_POINTS + 1, 30, 8);
+    expect(() => splitSelfIntersections(ring)).toThrow(
+      /200,001 points after flattening, over the 200,000 limit.*--samples/s,
+    );
+  });
+
+  it('refuses to split a crossing contour that is too big to split', () => {
+    // Past MAX_SPLIT_POINTS but well under MAX_RING_POINTS, and crossing.
+    const ring = polarRing(MAX_SPLIT_POINTS + 1, 15, 32);
+    expect(() => splitSelfIntersections(ring)).toThrow(
+      /self-intersecting contour has 30,001 points.*30,000 limit.*--samples/s,
+    );
+  });
+
+  it('lets a contour of the same size through when it does not cross', () => {
+    const ring = polarRing(MAX_SPLIT_POINTS + 1, 30, 8);
+    expect(splitSelfIntersections(ring)).toHaveLength(1);
   });
 });
 

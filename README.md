@@ -128,16 +128,25 @@ npx react-native-logo-draw extract --svg mark.svg --json > src/brand/mark.json
 | `--svg <file>` | — | An SVG file, or a file holding bare path data |
 | `--box <n>` | `100` | viewBox edge length |
 | `--size <pct>` | `86` | Percentage of the box the mark fills; the rest is optical margin |
-| `--samples <n>` | `48` | Curve flattening resolution, per segment |
+| `--samples <n>` | `48` | Curve flattening resolution, per segment (max `512`) |
 | `--simplify <n>` | `0.12` | Simplify tolerance, in viewBox units |
 | `--precision <n>` | `2` | Decimal places in the emitted path |
-| `--verify <n>` | `96` | Self-check grid edge; `0` skips it |
+| `--verify <n>` | `96` | Self-check grid edge; `0` skips it (max `1024`) |
 | `--name <Ident>` | `LOGO` | Constant name in the TypeScript snippet |
 | `--json` | off | Emit JSON instead of a TypeScript snippet |
-| `--out <file>` | stdout | Write to a file |
+| `--out <file>` | stdout | Write to a file, if nothing is there already |
+| `--force` | off | Let `--out` overwrite an existing file |
 
 Diagnostics go to stderr and the payload to stdout, so `--json > mark.json`
 does what you expect.
+
+`--out` will not overwrite a file that already exists — pass `--force` when you
+mean to — and it will not write through a symlink at all.
+
+`--samples` multiplies: every curve in the source becomes that many points
+before any geometry runs. A detailed logo at a high `--samples` can reach
+hundreds of thousands of points, and the command will stop and tell you to lower
+it rather than grinding away silently.
 
 Installing the component does **not** install the CLI's dependencies. The CLI
 is shipped pre-bundled, so `dependencies: {}` stays literally true.

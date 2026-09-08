@@ -5,7 +5,7 @@
  * Diagnostics go to stderr, the copy-pasteable payload to stdout, so
  * `... --json > logo.json` does the obvious thing.
  */
-import { writeFileSync } from 'node:fs';
+import { lstatSync, writeFileSync } from 'node:fs';
 import { buildFromContours, type ExtractResult } from './geometry';
 import { contoursFromGlyph } from './font';
 import { contoursFromSvgFile } from './svg';
@@ -26,15 +26,16 @@ Shape
   --box <n>           viewBox edge length            (default 100)
   --size <pct>        percentage of the box the mark
                       fills, the rest is optical margin (default 86)
-  --samples <n>       curve flattening resolution    (default 48)
+  --samples <n>       curve flattening resolution    (default 48, max 512)
   --simplify <n>      simplify tolerance, in viewBox units (default 0.12)
   --precision <n>     decimal places in the path     (default 2)
-  --verify <n>        self-check grid edge, 0 to skip (default 96)
+  --verify <n>        self-check grid edge, 0 to skip (default 96, max 1024)
 
 Output
   --name <Ident>      constant name in the TS snippet (default LOGO)
   --json              emit JSON instead of a TS snippet
   --out <file>        write to a file instead of stdout
+  --force             let --out overwrite an existing file
   -h, --help          this
 
 Why the union step exists
@@ -58,7 +59,24 @@ type Options = {
   name: string;
   json: boolean;
   out?: string;
+  force: boolean;
 };
+
+/**
+ * `--samples` multiplies: every curve in the source becomes this many points
+ * before any geometry runs, so 512 on a 400-curve logo is already 204,800
+ * points. Past that the command is not slow, it is wrong about what you asked
+ * for — the simplify pass throws the extra detail away again.
+ */
+const MAX_SAMPLES = 512;
+
+/**
+ * `--verify` is a grid edge, so the work is its square times the ring count.
+ * Measured on a glyph: 96 (the default) is about a second, 1024 about 26s,
+ * 2048 about 90s. 1024 is the last value that is merely patient rather than
+ * indistinguishable from a hang.
+ */
+const MAX_VERIFY = 1024;
 
 class UsageError extends Error {}
 
@@ -80,6 +98,7 @@ export function parseArgs(argv: string[]): Options {
     verify: 96,
     name: 'LOGO',
     json: false,
+    force: false,
   };
 
   for (let i = 0; i < argv.length; i += 1) {
@@ -106,6 +125,7 @@ export function parseArgs(argv: string[]): Options {
       case '--name': options.name = next(); break;
       case '--out': options.out = next(); break;
       case '--json': options.json = true; break;
+      case '--force': options.force = true; break;
       default:
         throw new UsageError(`unknown flag ${flag}`);
     }
@@ -117,9 +137,15 @@ export function parseArgs(argv: string[]): Options {
   if (options.box <= 0) throw new UsageError('--box must be positive');
   if (options.size <= 0 || options.size > 100) throw new UsageError('--size is a percentage in (0, 100]');
   if (options.samples < 1) throw new UsageError('--samples must be at least 1');
+  if (options.samples > MAX_SAMPLES) {
+    throw new UsageError(`--samples is 1-${MAX_SAMPLES}; higher only makes the run slower, not the path better`);
+  }
   if (options.simplify < 0) throw new UsageError('--simplify cannot be negative');
   if (options.precision < 0 || options.precision > 10) throw new UsageError('--precision is 0–10');
   if (options.verify < 0) throw new UsageError('--verify cannot be negative');
+  if (options.verify > MAX_VERIFY) {
+    throw new UsageError(`--verify is 0-${MAX_VERIFY}; the grid is that number squared and a bigger one just takes minutes`);
+  }
   if (!/^[A-Za-z_$][\w$]*$/.test(options.name)) throw new UsageError('--name must be a valid identifier');
 
   return options;
@@ -156,6 +182,32 @@ export function formatSnippet(result: ExtractResult, name: string): string {
     '} as const;',
     '',
   ].join('\n');
+}
+
+/**
+ * Write `--out` without destroying anything the user did not mean to lose.
+ *
+ * `wx` refuses to write over a file that already exists, which also means it
+ * refuses to follow a symlink into somewhere else — `O_EXCL` fails on the link
+ * itself. `--force` opts back into overwriting, but not into following: a
+ * symlink is still refused, because "overwrite my output file" is never a
+ * request to write through a link to a target you cannot see from the command
+ * line.
+ */
+function writeOut(path: string, payload: string, force: boolean): void {
+  let link: ReturnType<typeof lstatSync> | null = null;
+  try {
+    link = lstatSync(path);
+  } catch {
+    link = null; // nothing there, which is the happy path
+  }
+  if (link?.isSymbolicLink()) {
+    throw new Error(`${path} is a symlink; refusing to write through it. Pick a real path.`);
+  }
+  if (!force && link) {
+    throw new Error(`${path} already exists. Pass --force to overwrite it.`);
+  }
+  writeFileSync(path, payload, force ? undefined : { flag: 'wx' });
 }
 
 export function run(argv: string[]): number {
@@ -222,7 +274,12 @@ export function run(argv: string[]): number {
     : formatSnippet(result, options.name);
 
   if (options.out) {
-    writeFileSync(options.out, payload);
+    try {
+      writeOut(options.out, payload, options.force);
+    } catch (error) {
+      process.stderr.write(`${(error as Error).message}\n`);
+      return 1;
+    }
     process.stderr.write(`wrote ${options.out}\n`);
   } else {
     process.stdout.write(payload);
