@@ -6,9 +6,9 @@ mark never sits as a hollow outline waiting for something to happen to it.
 
 ![A monogram, a ring and a spark drawing themselves on, then filling](https://raw.githubusercontent.com/praz-builds/react-native-logo-draw/main/docs/demo.gif)
 
-[![npm](https://img.shields.io/npm/v/react-native-logo-draw.svg)](https://www.npmjs.com/package/react-native-logo-draw)
-[![downloads](https://img.shields.io/npm/dm/react-native-logo-draw.svg)](https://www.npmjs.com/package/react-native-logo-draw)
-[![license](https://img.shields.io/npm/l/react-native-logo-draw.svg)](./LICENSE)
+[![CI](https://github.com/praz-builds/react-native-logo-draw/actions/workflows/ci.yml/badge.svg)](https://github.com/praz-builds/react-native-logo-draw/actions/workflows/ci.yml)
+[![license](https://img.shields.io/github/license/praz-builds/react-native-logo-draw)](./LICENSE)
+[![runtime dependencies](https://img.shields.io/badge/runtime%20deps-0-brightgreen)](./package.json)
 
 - 🪶 **Zero runtime dependencies.** `dependencies: {}`. Nothing reaches your
   bundle beyond `react-native-svg`, which you already have.
@@ -23,6 +23,12 @@ mark never sits as a hollow outline waiting for something to happen to it.
 - ♿ **Respects Reduce Motion** — settles instantly, schedules nothing.
 
 ## Install
+
+> **Not on npm yet.** Until the first release, install from GitHub:
+>
+> ```sh
+> npm install praz-builds/react-native-logo-draw react-native-svg
+> ```
 
 ```sh
 npm install react-native-logo-draw react-native-svg
