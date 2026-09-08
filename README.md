@@ -4,15 +4,23 @@ Animate any SVG path being drawn on — a pen traces the outline, then ink flood
 it. One gesture, not two steps: the fill starts before the pen lands, so the
 mark never sits as a hollow outline waiting for something to happen to it.
 
-![demo](docs/demo.gif)
+![A monogram, a ring and a spark drawing themselves on, then filling](https://raw.githubusercontent.com/praz-builds/react-native-logo-draw/main/docs/demo.gif)
 
-- **Zero runtime dependencies.** `dependencies: {}`. Nothing is added to your
+[![npm](https://img.shields.io/npm/v/react-native-logo-draw.svg)](https://www.npmjs.com/package/react-native-logo-draw)
+[![downloads](https://img.shields.io/npm/dm/react-native-logo-draw.svg)](https://www.npmjs.com/package/react-native-logo-draw)
+[![license](https://img.shields.io/npm/l/react-native-logo-draw.svg)](./LICENSE)
+
+- 🪶 **Zero runtime dependencies.** `dependencies: {}`. Nothing reaches your
   bundle beyond `react-native-svg`, which you already have.
-- **Built-in `Animated`.** No Reanimated, no native module, no config plugin.
-- **iOS, Android and web**, from the same code.
-- **A CLI that does the hard part** — turning a font glyph or an SVG into a
-  single traceable outline, and measuring the perimeter React Native cannot
+- 🚫 **No Reanimated, no worklets, no native module, no config plugin.** Built
+  on React Native's own `Animated`.
+- 📱 **iOS, Android and web**, from the same code.
+- 🔧 **A CLI that does the hard part** — turns a font glyph or an SVG into a
+  single traceable outline and measures the perimeter React Native cannot
   measure at runtime.
+- 🧩 **Merges overlapping contours**, so letters from real display faces
+  actually trace instead of coming apart into pieces.
+- ♿ **Respects Reduce Motion** — settles instantly, schedules nothing.
 
 ## Install
 
@@ -69,6 +77,30 @@ Commit that file and spread it into the component:
 ```tsx
 <LogoDraw {...BrandMark} size={96} color="#E4572E" />
 ```
+
+## What people use it for
+
+### Animate a logo on a splash screen
+
+The case it was built for. Draw the mark while your fonts and bundle load, then
+hand off to the app. The mark is geometry, not a glyph, so it renders before any
+font has finished loading.
+
+### Animate an SVG path in React Native
+
+Any path works — an icon, an illustration, a route line on a map, a chart
+stroke. If you can express it as SVG path data, it can be drawn on.
+
+### Animate a signature or handwriting
+
+Give it a signature captured as a path and it replays as if being written. Note
+this is playback, not capture — if you need users to *sign*, use
+`react-native-signature-canvas` and animate the path it gives you.
+
+### Reveal an icon on first run
+
+Short `duration`, `autoPlay={false}`, and a `play()` call on the ref when the
+element scrolls into view.
 
 ## The CLI
 
@@ -226,6 +258,24 @@ of motion the setting exists to prevent.
 Without an `accessibilityLabel` the mark is marked decorative and hidden from
 screen readers, which is right for a logo sitting next to its own wordmark. Give
 it a label and it is announced as an image. Either way it never takes focus.
+
+## How it compares
+
+| | this | hand-rolled | [react-native-svg-animations](https://github.com/73R3WY/react-native-svg-animations) | Lottie |
+| --- | --- | --- | --- | --- |
+| Draw-on a path | ✅ | ✅ | ✅ | ✅ |
+| Computes path length for you | ✅ | ❌ by hand | ❌ you supply it | n/a |
+| Merges overlapping font contours | ✅ | ❌ | ❌ | n/a |
+| Fill overlapping the trace | ✅ | ~ | ❌ | ✅ |
+| Runtime dependencies | **0** | 0 | 0 | a native module |
+| Complex multi-layer motion | ❌ | ❌ | ❌ | ✅ **use Lottie** |
+| Designer hands you the asset | ❌ SVG only | ❌ | ❌ | ✅ After Effects |
+| Maintained | ✅ | — | last commit Jan 2024 | ✅ |
+
+If you need a multi-layer animation with easing curves authored by a designer,
+use [Lottie](https://github.com/lottie-react-native/lottie-react-native); this
+does one effect and does not compete with that. If you need one logo to draw
+itself and do not want a native module in your graph, this is the smaller tool.
 
 ## Limitations
 

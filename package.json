@@ -5,27 +5,38 @@
   "keywords": [
     "react-native",
     "expo",
+    "react-native-web",
     "svg",
+    "svg-animation",
+    "svg-path",
+    "path-animation",
     "animation",
+    "animated-svg",
     "logo",
+    "logo-animation",
     "draw",
+    "drawing-animation",
     "stroke",
+    "stroke-dasharray",
     "strokeDashoffset",
     "signature",
-    "splash",
+    "handwriting",
+    "splash-screen",
     "brand",
-    "react-native-web"
+    "ios",
+    "android",
+    "typescript"
   ],
   "license": "MIT",
   "author": "Prasanna",
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/prasanna/react-native-logo-draw.git"
+    "url": "git+https://github.com/praz-builds/react-native-logo-draw.git"
   },
   "bugs": {
-    "url": "https://github.com/prasanna/react-native-logo-draw/issues"
+    "url": "https://github.com/praz-builds/react-native-logo-draw/issues"
   },
-  "homepage": "https://github.com/prasanna/react-native-logo-draw#readme",
+  "homepage": "https://github.com/praz-builds/react-native-logo-draw#readme",
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "exports": {
