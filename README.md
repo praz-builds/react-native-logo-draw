@@ -325,3 +325,8 @@ See [CONTRIBUTING.md](CONTRIBUTING.md).
 ## License
 
 MIT © Prasanna
+
+The component ships no dependencies. The `extract` CLI compiles opentype.js,
+polygon-clipping and svgpath (and what those two had already inlined) into
+`dist/cli.js` at publish time — every one of those licences travels with the
+tarball in [THIRD-PARTY-NOTICES.md](THIRD-PARTY-NOTICES.md).

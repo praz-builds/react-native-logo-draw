@@ -20,7 +20,17 @@ await build({
   platform: 'node',
   target: 'node18',
   format: 'cjs',
-  legalComments: 'none',
+  // Bundling is redistribution, and the bundled libraries are MIT: their notices
+  // have to travel with the copy. THIRD-PARTY-NOTICES.md is what actually
+  // discharges that — it is complete, and it ships in `files`.
+  //
+  // 'eof' is kept anyway because it is nearly free (about 120 bytes) and it is
+  // the only attribution that lives *inside* dist/cli.js. Do not mistake it for
+  // the fix: esbuild can only keep comments that upstream marked `/*!`, `//!`,
+  // `@license` or `@preserve`, and of the seven bundled bodies of code exactly
+  // one does — the codepointat polyfill inlined in opentype.js. The other six,
+  // opentype.js's own banner included, are plain comments and get minified away.
+  legalComments: 'eof',
   banner: { js: '#!/usr/bin/env node' },
 });
 
